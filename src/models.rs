@@ -8,9 +8,9 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MiAccount {
     pub user_id: String,
-    pub secruity_token: String,
+    pub security_token: String,
     pub device_id: String,
-    pub serivce_token: String,
+    pub service_token: String,
     pub cookies: HashMap<String, String>,
 }
 
