@@ -1,9 +1,12 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use reqwest::{Client, Url};
+use reqwest::{Client, Response, Url};
+use tokio::io::Stderr;
 
-use crate::models::AccountSignatureResponse;
+use crate::models::{AccountLoginResponse, AccountSignatureResponse};
+use crate::utils::encrypt_with_md5;
 
 static BASE_UA: &str = "APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS";
 
@@ -26,10 +29,31 @@ impl HttpClient {
             &[("sid", "xiaomiio"), ("_json", "true")],
         )?;
         let response = self.client.get(url).send().await?;
+        let json = self.parse_json_from_response(response).await?;
+        Ok(serde_json::from_str(&json)?)
+    }
+
+    pub async fn login(&self, username: &str, password: &str, signature: &AccountSignatureResponse) -> anyhow::Result<AccountLoginResponse> {
+        let hash = encrypt_with_md5(password).to_uppercase();
+        let mut params = HashMap::new();
+        params.insert("qs", signature.qs.as_str());
+        params.insert("sid", signature.sid.as_str());
+        params.insert("_sign", signature.sign.as_str());
+        params.insert("callback", signature.callback.as_str());
+        params.insert("_json", "true");
+        params.insert("user", username);
+        params.insert("hash", &hash);
+        let response = self.client.post("https://account.xiaomi.com/pass/serviceLoginAuth2")
+            .form(&params)
+            .send().await?;
+        let json = self.parse_json_from_response(response).await?;
+        Ok(serde_json::from_str(&json)?)
+    }
+
+    async fn parse_json_from_response(&self, response: Response) -> anyhow::Result<String> {
         let body = response.text().await?;
-        Ok(serde_json::from_str::<AccountSignatureResponse>(
-            &body[11..],
-        )?)
+        println!("body:{}",&body);
+        Ok(String::from(&body[11..]))
     }
 }
 
@@ -38,9 +62,9 @@ mod test {
     use super::HttpClient;
 
     #[tokio::test]
-    async fn test_sigature() {
+    async fn test_login() {
         let client = HttpClient::new();
-        let result = client.get_signature().await.unwrap();
-        println!("{:?}", result)
+        let signature = client.get_signature().await.unwrap();
+        println!("{:?}", signature)
     }
 }
