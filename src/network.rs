@@ -1,5 +1,8 @@
+use core::num;
 use std::collections::HashMap;
+use std::f32::consts::E;
 
+use log::{log, trace};
 use reqwest::{Client, Response, Url};
 
 use crate::models::{AccountLoginResponse, AccountSignatureResponse};
@@ -57,7 +60,7 @@ impl HttpClient {
 
     async fn parse_json_from_response(&self, response: Response) -> anyhow::Result<String> {
         let body = response.text().await?;
-        println!("body:{}", &body);
+        trace!("network response text:{}", &body);
         Ok(String::from(&body[11..]))
     }
 }
