@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
-use anyhow::anyhow;
 use reqwest::{Client, Response, Url};
-use tokio::io::Stderr;
 
 use crate::models::{AccountLoginResponse, AccountSignatureResponse};
 use crate::utils::encrypt_with_md5;
@@ -33,7 +30,12 @@ impl HttpClient {
         Ok(serde_json::from_str(&json)?)
     }
 
-    pub async fn login(&self, username: &str, password: &str, signature: &AccountSignatureResponse) -> anyhow::Result<AccountLoginResponse> {
+    pub async fn login(
+        &self,
+        username: &str,
+        password: &str,
+        signature: &AccountSignatureResponse,
+    ) -> anyhow::Result<AccountLoginResponse> {
         let hash = encrypt_with_md5(password).to_uppercase();
         let mut params = HashMap::new();
         params.insert("qs", signature.qs.as_str());
@@ -43,16 +45,19 @@ impl HttpClient {
         params.insert("_json", "true");
         params.insert("user", username);
         params.insert("hash", &hash);
-        let response = self.client.post("https://account.xiaomi.com/pass/serviceLoginAuth2")
+        let response = self
+            .client
+            .post("https://account.xiaomi.com/pass/serviceLoginAuth2")
             .form(&params)
-            .send().await?;
+            .send()
+            .await?;
         let json = self.parse_json_from_response(response).await?;
         Ok(serde_json::from_str(&json)?)
     }
 
     async fn parse_json_from_response(&self, response: Response) -> anyhow::Result<String> {
         let body = response.text().await?;
-        println!("body:{}",&body);
+        println!("body:{}", &body);
         Ok(String::from(&body[11..]))
     }
 }
@@ -65,6 +70,7 @@ mod test {
     async fn test_login() {
         let client = HttpClient::new();
         let signature = client.get_signature().await.unwrap();
-        println!("{:?}", signature)
+        let login_response = client.login("xxx", "xxx", &signature).await.unwrap();
+        println!("{:?}", login_response)
     }
 }

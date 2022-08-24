@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{
-    Deserialize, Serialize,
-};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -27,10 +25,10 @@ pub struct AccountSignatureResponse {
 pub struct AccountLoginResponse {
     pub code: u8,
     pub desc: String,
-    pub nonce: String,
+    pub nonce: u128,
     pub location: String,
     #[serde(alias = "userId")]
-    pub user_id: String,
+    pub user_id: u64,
     pub ssecurity: String,
 }
 // #[derive(Clone, Debug, Serialize, Deserialize)]
