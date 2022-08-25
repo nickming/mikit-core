@@ -2,6 +2,15 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum MikitError {
+    #[error("network error: `{0}`")]
+    NetworkError(String),
+    #[error("unknown data store error")]
+    Unknown,
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MiAccount {
