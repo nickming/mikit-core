@@ -16,15 +16,17 @@ pub struct HttpClient {
     client: Client,
 }
 
-impl HttpClient {
-    pub fn new() -> Self {
+impl Default for HttpClient {
+    fn default() -> Self {
         let client = reqwest::ClientBuilder::new()
             .user_agent(BASE_UA)
             .build()
             .unwrap();
-        HttpClient { client }
+        Self { client }
     }
+}
 
+impl HttpClient {
     pub async fn login(&self, username: &str, password: &str) -> anyhow::Result<MiAccount> {
         let signature = self.fetch_signature().await?;
         let login_resp = self
@@ -140,7 +142,7 @@ mod test {
 
     #[tokio::test]
     async fn test_login() {
-        let client = HttpClient::new();
+        let client = HttpClient::default();
         let login_response = client.login("xxx", "xx").await.unwrap();
         println!("{:?}", login_response)
     }
