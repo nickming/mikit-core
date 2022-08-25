@@ -1,6 +1,5 @@
 use core::num;
 use std::collections::HashMap;
-use std::f32::consts::E;
 
 use anyhow::{anyhow, Ok};
 use base64::encode;
@@ -69,6 +68,12 @@ impl HttpClient {
         Ok(serde_json::from_str(&json)?)
     }
 
+    async fn test(&self) {
+        let url = "https://sts.api.io.mi.com/sts?d=wb_0f7fb291-fa3d-427d-a72c-dc7ff0f1dbf1&ticket=0&pwd=1&p_ts=1661440198000&fid=0&p_lm=1&auth=xdiuNBJwC73Y1lQdbbvs4Ze9hWy9PMxoJs1IFLHt8%2BW%2FP4aXF%2F9%2FB9XSOPKQEMp1n%2BxiLnsA3PfrMGkwmDzT7iLYmyV7ROFgu9kjfWXK8k%2B9a65FbaJm8qtpByWEEdoXazDkBoGShbjmEhHbfOmwzquOVsU33OeomdqwBa8kme8%3D&m=1&tsl=0&p_ca=0&p_idc=China&nonce=BSyEIBTlnvEBpoat&_ssign=HP3gsVD7ByZmNvdxy1J1%2FW6Yraw%3D&clientSign=n4D%2B3iTzd79UTUgUaZiRNGINBK8%3D";
+        let response = self.client.get(url).send().await.unwrap();
+        println!("{:?}", response.headers());
+    }
+
     async fn fetch_auth_device_info(
         &self,
         login_resp: &AccountLoginResponse,
@@ -77,10 +82,10 @@ impl HttpClient {
         let url = format!(
             "{}&clientSign={}",
             login_resp.location,
-            encode(encode_to_base64(&encrypt_with_sha1(&nonce)))
+            urlencoding::encode(encode_to_base64(&encrypt_with_sha1(&nonce)).as_str())
         );
-        println!("url:{}", url);
         let response = self.client.get(url).send().await?;
+        println!("headers:{:?}", response.headers());
         let cookies = self.parse_cookies(response.headers());
         if cookies.is_empty() {
             return Err(MikitError::NetworkError(
@@ -108,21 +113,21 @@ impl HttpClient {
 
     fn parse_cookies(&self, header_map: &HeaderMap) -> HashMap<String, String> {
         let mut result: HashMap<String, String> = HashMap::new();
-        println!("{:?}", header_map);
-        if let Some(value) = header_map.get("Set-Cookie") {
+        let all_cookie_value = header_map.get_all("set-cookie");
+        for value in all_cookie_value {
+            println!("{:?}", value);
             if value.is_empty() {
                 trace!("can not parse headers cause empty cookies");
-                return result;
+                continue;
             }
             String::from_utf8(value.as_bytes().to_vec())
                 .unwrap_or("".to_string())
                 .trim()
                 .split(";")
                 .filter(|x| x.contains("="))
-                .map(|x| x.split("=").collect())
-                .filter(|x: &Vec<&str>| x.len() == 2)
+                .map(|x| x.split_once("=").unwrap_or((&"", &"")))
                 .for_each(|x| {
-                    result.insert(x[0].to_string(), x[1].to_string());
+                    result.insert(x.0.to_string(), x.1.to_string());
                 });
         }
         result
@@ -136,7 +141,7 @@ mod test {
     #[tokio::test]
     async fn test_login() {
         let client = HttpClient::new();
-        let login_response = client.login("xxx", "xxx").await.unwrap();
+        let login_response = client.login("xxx", "xx").await.unwrap();
         println!("{:?}", login_response)
     }
 }
