@@ -9,35 +9,55 @@ use std::{
 use anyhow::Ok;
 use sled::Db;
 
-use crate::network::HttpClient;
+use crate::{
+    models::{MiAccount, MikitError},
+    network::HttpClient,
+};
 
 struct MiKit {
     http_client: Arc<HttpClient>,
     db: Option<Arc<Db>>,
+    account: Arc<RwLock<Option<MiAccount>>>,
     is_logged: AtomicBool,
 }
 
 impl MiKit {
-    fn new() -> Self {
+    pub fn new() -> Self {
         MiKit {
             http_client: Arc::new(HttpClient::default()),
             db: None,
+            account: Arc::new(RwLock::new(None)),
             is_logged: AtomicBool::new(false),
         }
     }
 
-    fn initialize(&mut self) -> anyhow::Result<()> {
+    pub fn initialize(&mut self) -> anyhow::Result<()> {
         let sled = sled::open("mikit_db")?;
-        self.is_logged.store(true, atomic::Ordering::Relaxed);
+        if let Some(vec) = sled.get("account")? {
+            let account = rmp_serde::from_slice::<MiAccount>(&vec)?;
+            let mut guard = self.account.write().unwrap();
+            *guard = Some(account);
+            self.is_logged.store(true, atomic::Ordering::Relaxed);
+        }
         self.db = Some(Arc::new(sled));
         Ok(())
     }
 
-    fn login(&self, username: &str, password: &str) {}
+    pub async fn login(&self, username: &str, password: &str) -> anyhow::Result<()> {
+        let client = self.http_client.clone();
+        let account = client.login(username, password).await?;
+        let mut guard = self.account.write().unwrap();
+        *guard = Some(account);
+        Ok(())
+    }
 
-    fn logout(&mut self) -> anyhow::Result<()> {
+    pub fn logout(&mut self) -> anyhow::Result<()> {
         let db = self.db.as_ref().unwrap().clone();
         db.clear()?;
+        Ok(())
+    }
+
+    async fn update_account(&self, account: MiAccount) -> anyhow::Result<()> {
         Ok(())
     }
 }

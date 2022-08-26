@@ -226,7 +226,10 @@ mod test {
                 &account,
             )
             .await
-            .unwrap();
+            .unwrap()
+            .result
+            .unwrap()
+            .list;
         println!("{:?}", &response);
     }
 }
