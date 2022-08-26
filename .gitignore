@@ -9,3 +9,6 @@ Cargo.lock
 /target
 .idea/
 .viscode
+
+db
+/mikit_db
