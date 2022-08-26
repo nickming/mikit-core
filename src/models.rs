@@ -7,9 +7,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum MikitError {
     #[error("network error: `{0}`")]
-    NetworkError(String),
+    Network(String),
     #[error("unknown data store error")]
     Unknown,
+    #[error("json parse error")]
+    JsonParse(#[from] serde_json::Error),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -51,6 +53,11 @@ pub struct CommandResponse<T> {
     pub code: usize,
     pub message: String,
     pub result: Option<T>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DeviceListResult {
+    pub list: Vec<Device>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
