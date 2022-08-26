@@ -6,10 +6,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum MikitError {
-    #[error("network error: `{0}`")]
-    Network(String),
-    #[error("unknown data store error")]
-    Unknown,
+    #[error("network error")]
+    Network(#[from] reqwest::Error),
+    #[error("unknown data store error:{0}")]
+    Unknown(String),
     #[error("json parse error")]
     JsonParse(#[from] serde_json::Error),
 }

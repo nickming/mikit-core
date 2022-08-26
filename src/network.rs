@@ -53,17 +53,15 @@ impl HttpClient {
     ) -> anyhow::Result<T> {
         let uri = command.get_uri();
         let data = command.get_data()?;
-        let response_text = self
-            .execute_command_uri_and_data(&uri, &data, account)
-            .await?;
-        Ok(self.parser_json::<T>(&response_text)?)
+        self.execute_command_uri_and_data::<T>(&uri, &data, account)
+            .await
     }
 
     async fn fetch_signature(&self) -> anyhow::Result<AccountSignatureResponse> {
         let url = Url::parse_with_params(SIGNATURE_API, &[("sid", "xiaomiio"), ("_json", "true")])?;
         let response = self.client.get(url).send().await?;
         let json = self.parse_json_from_response(response).await?;
-        Ok(serde_json::from_str(&json)?)
+        serde_json::from_str(&json).map_err(|e| MikitError::JsonParse(e).into())
     }
 
     async fn fetch_login_response(
@@ -83,7 +81,7 @@ impl HttpClient {
         params.insert("hash", &hash);
         let response = self.client.post(LOGIN_API).form(&params).send().await?;
         let json = self.parse_json_from_response(response).await?;
-        Ok(serde_json::from_str(&json)?)
+        serde_json::from_str(&json).map_err(|e| MikitError::JsonParse(e).into())
     }
 
     async fn fetch_auth_device_info(
@@ -100,7 +98,7 @@ impl HttpClient {
         let cookies = self.parse_cookies(response.headers());
         if cookies.is_empty() {
             return Err(
-                MikitError::Network("can not find cookies in auth device api".to_string()).into(),
+                MikitError::Unknown("can not find cookies in auth device api".to_string()).into(),
             );
         }
         Ok(MiAccount {
@@ -121,12 +119,12 @@ impl HttpClient {
         Ok(String::from(&body[11..]))
     }
 
-    async fn execute_command_uri_and_data(
+    async fn execute_command_uri_and_data<T: DeserializeOwned>(
         &self,
         uri: &str,
         data: &str,
         account: &MiAccount,
-    ) -> anyhow::Result<String> {
+    ) -> anyhow::Result<T> {
         let nonce = generate_nonce();
         let signed_nonce = generate_signed_nonce(&account.security_token, &nonce);
         let signature = generate_command_signature(uri, &signed_nonce, &nonce, data);
@@ -147,15 +145,16 @@ impl HttpClient {
         params.insert("_nonce", &nonce);
         params.insert("data", data);
         params.insert("signature", &signature);
-        Ok(self
-            .client
+        self.client
             .post(url)
             .form(&params)
             .headers(headers)
             .send()
-            .await?
-            .text()
-            .await?)
+            .await
+            .map_err(|e| MikitError::Network(e))?
+            .json::<T>()
+            .await
+            .map_err(|e| MikitError::Network(e).into())
     }
 
     fn parse_cookies(&self, header_map: &HeaderMap) -> HashMap<String, String> {
@@ -177,10 +176,6 @@ impl HttpClient {
                 });
         }
         result
-    }
-
-    fn parser_json<T: DeserializeOwned>(&self, json: &str) -> anyhow::Result<T> {
-        serde_json::from_str(json).map_err(|e| e.into())
     }
 }
 
