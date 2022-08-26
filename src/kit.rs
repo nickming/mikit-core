@@ -1,6 +1,9 @@
 use std::{
     any,
-    sync::{Arc, RwLock},
+    sync::{
+        atomic::{self, AtomicBool},
+        Arc, RwLock,
+    },
 };
 
 use anyhow::Ok;
@@ -8,35 +11,33 @@ use sled::Db;
 
 use crate::network::HttpClient;
 
-type Lock<T> = Arc<RwLock<Option<T>>>;
-
-struct App {
+struct MiKit {
     http_client: Arc<HttpClient>,
-    db: Lock<Db>,
+    db: Option<Arc<Db>>,
+    is_logged: AtomicBool,
 }
 
-impl App {
+impl MiKit {
     fn new() -> Self {
-        App {
+        MiKit {
             http_client: Arc::new(HttpClient::default()),
-            db: Arc::new(RwLock::new(None)),
+            db: None,
+            is_logged: AtomicBool::new(false),
         }
     }
 
     fn initialize(&mut self) -> anyhow::Result<()> {
         let sled = sled::open("mikit_db")?;
-        let mut guard = self.db.write().unwrap();
-        *guard = Some(sled);
+        self.is_logged.store(true, atomic::Ordering::Relaxed);
+        self.db = Some(Arc::new(sled));
         Ok(())
     }
 
     fn login(&self, username: &str, password: &str) {}
 
     fn logout(&mut self) -> anyhow::Result<()> {
-        let guard = self.db.write().unwrap();
-        if let Some(db) = guard.as_ref() {
-            db.clear()?;
-        }
+        let db = self.db.as_ref().unwrap().clone();
+        db.clear()?;
         Ok(())
     }
 }
