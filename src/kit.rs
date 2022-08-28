@@ -27,13 +27,26 @@ impl MiKit {
     pub async fn login(&self, username: &str, password: &str) -> anyhow::Result<()> {
         let client = self.http_client.clone();
         let account = client.login(username, password).await?;
+
+        let db = self.db.clone();
+        db.set("account", &account)?;
+
         let mut guard = self.account.write().unwrap();
-        *guard = Some(account);
+        *guard = Some(account.clone());
+
         Ok(())
     }
 
     pub fn logout(&mut self) -> anyhow::Result<()> {
+        let mut account = self.account.write().unwrap();
+        *account = None;
         self.db.clear()
+    }
+
+    pub fn get_account(&self) -> Option<MiAccount> {
+        let account = self.account.clone();
+        let account = account.read().unwrap();
+        account.as_ref().and_then(|value| Some(value.clone()))
     }
 }
 
@@ -41,9 +54,11 @@ impl MiKit {
 mod tests {
     use super::MiKit;
 
-    #[test]
-    fn feature() {
-        let kit = MiKit::new().unwrap();
-        println!("{:?}", &kit.account);
+    #[tokio::test]
+    async fn feature() {
+        let mikit = MiKit::new().unwrap();
+        mikit.login("xxx", "xxx").await.unwrap();
+        let account = mikit.get_account().unwrap();
+        println!("{:?}", &account);
     }
 }

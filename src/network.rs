@@ -2,7 +2,7 @@ use std::any;
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Ok};
-use log::{log, trace};
+use log::{info, log, trace};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{header, Client, Response, Url};
 use serde::de::DeserializeOwned;
@@ -115,7 +115,7 @@ impl HttpClient {
 
     async fn parse_json_from_response(&self, response: Response) -> anyhow::Result<String> {
         let body = response.text().await?;
-        trace!("network response text:{}", &body);
+        println!("network response text:{}", &body);
         Ok(String::from(&body[11..]))
     }
 
