@@ -1,6 +1,9 @@
+use std::path::Path;
+use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 use anyhow::Ok;
+use directories::ProjectDirs;
 
 use crate::{models::MiAccount, network::HttpClient, store::DataSore};
 
@@ -12,8 +15,8 @@ pub struct MiKit {
 }
 
 impl MiKit {
-    pub fn new() -> anyhow::Result<Self> {
-        let db = DataSore::new()?;
+    pub fn new(application_name: &str, organization_name: &str) -> anyhow::Result<Self> {
+        let db = DataSore::new(application_name, organization_name)?;
         let account = db.get::<MiAccount>("account").ok();
         let is_logged = AtomicBool::new(account.is_some());
         Ok(MiKit {
@@ -34,6 +37,8 @@ impl MiKit {
         let mut guard = self.account.write().unwrap();
         *guard = Some(account.clone());
 
+        self.is_logged.store(true, Ordering::Relaxed);
+
         Ok(())
     }
 
@@ -48,6 +53,10 @@ impl MiKit {
         let account = account.read().unwrap();
         account.as_ref().and_then(|value| Some(value.clone()))
     }
+
+    pub fn is_logged(&self) -> bool {
+        self.is_logged.load(Ordering::Relaxed)
+    }
 }
 
 #[cfg(test)]
@@ -56,8 +65,7 @@ mod tests {
 
     #[tokio::test]
     async fn feature() {
-        let mikit = MiKit::new().unwrap();
-        mikit.login("xxx", "xxx").await.unwrap();
+        let mikit = MiKit::new("mikit", "com.nickming").unwrap();
         let account = mikit.get_account().unwrap();
         println!("{:?}", &account);
     }
