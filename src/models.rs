@@ -14,6 +14,8 @@ pub enum MikitError {
     JsonParse(#[from] serde_json::Error),
     #[error("db operation error")]
     Store(#[from] sled::Error),
+    #[error("unlogin eror")]
+    UnLogin,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

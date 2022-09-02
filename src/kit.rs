@@ -5,6 +5,8 @@ use std::sync::{atomic::AtomicBool, Arc, RwLock};
 use anyhow::Ok;
 use directories::ProjectDirs;
 
+use crate::models::{CommandResponse, Device, DeviceListResult, MikitError};
+use crate::network::CommandReqeust;
 use crate::{models::MiAccount, network::HttpClient, store::DataSore};
 
 pub struct MiKit {
@@ -40,6 +42,23 @@ impl MiKit {
         self.is_logged.store(true, Ordering::Relaxed);
 
         Ok(())
+    }
+
+    pub async fn fetch_devices(&self) -> anyhow::Result<Vec<Device>> {
+        if !self.is_logged() {
+            return Err(MikitError::UnLogin.into());
+        }
+        let client = self.http_client.clone();
+        let account = self.get_account().unwrap();
+        Ok(client
+            .execute_command::<CommandResponse<DeviceListResult>>(
+                CommandReqeust::DeviceList,
+                &account,
+            )
+            .await?
+            .result
+            .ok_or(MikitError::Unknown("parse data error".to_string()))?
+            .list)
     }
 
     pub fn logout(&mut self) -> anyhow::Result<()> {

@@ -1,5 +1,5 @@
-mod kit;
-mod models;
+pub mod kit;
+pub mod models;
 mod network;
 mod store;
 mod utils;
