@@ -76,8 +76,8 @@ pub struct Device {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FetchDevicePropertiesRequestParams {
-    pub params: Vec<Device>,
+pub struct DevicePropertiesRequestParams {
+    pub params: Vec<DeviceProperties>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -89,4 +89,28 @@ pub struct DeviceProperties {
     pub code: Option<usize>,
     #[serde(alias = "in")]
     pub action: Option<Value>,
+}
+
+impl DeviceProperties {
+    pub fn new_get_properties(did: &str, siid: usize, piid: usize) -> Self {
+        Self {
+            did: did.to_string(),
+            siid: siid,
+            piid: piid,
+            value: None,
+            code: None,
+            action: None,
+        }
+    }
+
+    pub fn new_set_properties(did: &str, siid: usize, piid: usize, value: Value) -> Self {
+        Self {
+            did: did.to_string(),
+            siid: siid,
+            piid: piid,
+            value: Some(value),
+            code: None,
+            action: None,
+        }
+    }
 }

@@ -11,7 +11,7 @@ use serde_json::to_string;
 
 use crate::models::{
     AccountLoginResponse, AccountSignatureResponse, Device, DeviceProperties,
-    FetchDevicePropertiesRequestParams, MiAccount, MikitError,
+    DevicePropertiesRequestParams, MiAccount, MikitError,
 };
 use crate::utils::{
     encode_to_base64, encrypt_with_md5, encrypt_with_sha1, generate_command_signature,
@@ -181,7 +181,8 @@ impl HttpClient {
 
 pub enum CommandReqeust {
     DeviceList,
-    DeviceProperties(FetchDevicePropertiesRequestParams),
+    GetProperties(DevicePropertiesRequestParams),
+    SetProperties(DevicePropertiesRequestParams),
 }
 
 impl CommandReqeust {
@@ -192,7 +193,10 @@ impl CommandReqeust {
                     "getHuamiDevices":0
                 }"#
             .to_string()),
-            CommandReqeust::DeviceProperties(params) => {
+            CommandReqeust::GetProperties(params) => {
+                serde_json::to_string_pretty(params).map_err(|e| e.into())
+            }
+            CommandReqeust::SetProperties(params) => {
                 serde_json::to_string_pretty(params).map_err(|e| e.into())
             }
         }
@@ -201,35 +205,8 @@ impl CommandReqeust {
     fn get_uri(&self) -> String {
         match self {
             CommandReqeust::DeviceList => "/home/device_list".to_string(),
-            CommandReqeust::DeviceProperties(_) => "/miotspec/prop/get".to_string(),
+            CommandReqeust::GetProperties(_) => "/miotspec/prop/get".to_string(),
+            CommandReqeust::SetProperties(_) => "/miotspec/prop/set".to_string(),
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{
-        models::{CommandResponse, Device, DeviceListResult},
-        network::CommandReqeust,
-    };
-
-    use super::HttpClient;
-
-    #[tokio::test]
-    async fn test_network() {
-        let client = HttpClient::default();
-        let account = client.login("xxx", "xxx").await.unwrap();
-        println!("{:?}", &account);
-        let response = client
-            .execute_command::<CommandResponse<DeviceListResult>>(
-                CommandReqeust::DeviceList,
-                &account,
-            )
-            .await
-            .unwrap()
-            .result
-            .unwrap()
-            .list;
-        println!("{:?}", &response);
     }
 }

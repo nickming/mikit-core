@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, iter::repeat};
+use std::iter::repeat;
 
 use crypto::{digest::Digest, hmac::Hmac, mac::Mac, md5, sha1::Sha1, sha2::Sha256};
 use rand::Rng;

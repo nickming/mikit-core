@@ -4,8 +4,12 @@ use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 use anyhow::Ok;
 use directories::ProjectDirs;
+use serde_json::Value;
 
-use crate::models::{CommandResponse, Device, DeviceListResult, MikitError};
+use crate::models::{
+    CommandResponse, Device, DeviceListResult, DeviceProperties, DevicePropertiesRequestParams,
+    MikitError,
+};
 use crate::network::CommandReqeust;
 use crate::{models::MiAccount, network::HttpClient, store::DataSore};
 
@@ -61,6 +65,47 @@ impl MiKit {
             .list)
     }
 
+    pub async fn get_device_properties(
+        &self,
+        device_properties: &[DeviceProperties],
+    ) -> anyhow::Result<Vec<DeviceProperties>> {
+        if !self.is_logged() {
+            return Err(MikitError::UnLogin.into());
+        }
+        let client = self.http_client.clone();
+        let account = self.get_account().unwrap();
+        client
+            .execute_command::<CommandResponse<Vec<DeviceProperties>>>(
+                CommandReqeust::GetProperties(DevicePropertiesRequestParams {
+                    params: device_properties.to_vec(),
+                }),
+                &account,
+            )
+            .await?
+            .result
+            .ok_or(MikitError::Unknown("unable to get device properties".to_string()).into())
+    }
+
+    pub async fn set_device_properties(
+        &mut self,
+        device_properties: &[DeviceProperties],
+    ) -> anyhow::Result<()> {
+        if !self.is_logged() {
+            return Err(MikitError::UnLogin.into());
+        }
+        let client = self.http_client.clone();
+        let account = self.get_account().unwrap();
+        client
+            .execute_command::<CommandResponse<Value>>(
+                CommandReqeust::SetProperties(DevicePropertiesRequestParams {
+                    params: device_properties.to_vec(),
+                }),
+                &account,
+            )
+            .await?;
+        Ok(())
+    }
+
     pub fn logout(&mut self) -> anyhow::Result<()> {
         let mut account = self.account.write().unwrap();
         *account = None;
@@ -75,17 +120,5 @@ impl MiKit {
 
     pub fn is_logged(&self) -> bool {
         self.is_logged.load(Ordering::Relaxed)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::MiKit;
-
-    #[tokio::test]
-    async fn feature() {
-        let mikit = MiKit::new("mikit", "com.nickming").unwrap();
-        let account = mikit.get_account().unwrap();
-        println!("{:?}", &account);
     }
 }
