@@ -1,9 +1,7 @@
-use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 use anyhow::Ok;
-use directories::ProjectDirs;
 use serde_json::Value;
 
 use crate::models::{
@@ -20,17 +18,23 @@ pub struct MiKit {
     is_logged: AtomicBool,
 }
 
+impl Default for MiKit {
+    fn default() -> Self {
+        MiKit::new("mikit", "com.nickming")
+    }
+}
+
 impl MiKit {
-    pub fn new(application_name: &str, organization_name: &str) -> anyhow::Result<Self> {
-        let db = DataSore::new(application_name, organization_name)?;
+    pub fn new(application_name: &str, organization_name: &str) -> Self {
+        let db = DataSore::new(application_name, organization_name).unwrap();
         let account = db.get::<MiAccount>("account").ok();
         let is_logged = AtomicBool::new(account.is_some());
-        Ok(MiKit {
+        MiKit {
             http_client: Arc::new(HttpClient::default()),
             db: Arc::new(db),
             account: Arc::new(RwLock::new(account)),
             is_logged,
-        })
+        }
     }
 
     pub async fn login(&self, username: &str, password: &str) -> anyhow::Result<()> {

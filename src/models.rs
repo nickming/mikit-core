@@ -114,3 +114,18 @@ impl DeviceProperties {
         }
     }
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ModelInfo {
+    pub name: String,
+    pub model: String,
+    pub props: Vec<ModelProperty>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ModelProperty {
+    pub name: String,
+    pub siid: String,
+    pub piid: String,
+    pub value: Value,
+}

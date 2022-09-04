@@ -1,13 +1,10 @@
-use std::any;
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Ok};
-use log::{info, log, trace};
+use anyhow::Ok;
+use log::trace;
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{header, Client, Response, Url};
+use reqwest::{Client, Response, Url};
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use serde_json::to_string;
 
 use crate::models::{
     AccountLoginResponse, AccountSignatureResponse, Device, DeviceProperties,
